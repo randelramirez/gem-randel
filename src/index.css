@@ -8,6 +8,18 @@
   --primary: 172 114 84; /* warm terracotta */
   --accent: 201 173 167; /* blush */
   --ring: 172 114 84;
+  --surface: 255 255 255; /* cards */
+}
+
+/* Dark theme tokens (activated by adding class="dark" on <html>) */
+.dark {
+  --bg: 20 20 22;          /* near-neutral background */
+  --fg: 232 232 240;        /* soft white text */
+  --muted: 148 163 184;     /* slate-400 */
+  --primary: 201 173 167;   /* keep warmth, slightly lighter */
+  --accent: 172 114 84;     /* swap accent for subtle contrast */
+  --ring: 201 173 167;
+  --surface: 30 32 36;      /* card background */
 }
 
 @layer base {
@@ -23,6 +35,13 @@
   .tag { @apply inline-flex items-center gap-2 rounded-full border border-[rgb(var(--primary)/.2)] bg-white/70 backdrop-blur px-3 py-1 text-xs text-[rgb(var(--primary))]; }
   .font-script { font-family: "Great Vibes", ui-serif, cursive; }
 }
+
+/* Dark mode overrides for utility-based colors used in markup */
+.dark .bg-white { background-color: rgb(var(--surface)) !important; }
+.dark [class*="bg-white/"] { background-color: rgb(var(--surface)) !important; }
+.dark [class*="border-black"] { border-color: rgba(255,255,255,0.12) !important; }
+.dark .text-black { color: rgba(255,255,255,0.92) !important; }
+
 
 /* Simple reveal animation */
 @keyframes floatUp {

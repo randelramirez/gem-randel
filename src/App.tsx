@@ -53,7 +53,7 @@ export default function App() {
       <button
         aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
         onClick={() => setDark(v => !v)}
-        className="fixed bottom-6 right-6 z-50 inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white/80 backdrop-blur px-4 shadow-md hover:shadow-lg transition-all dark:bg-[rgb(var(--surface))]"
+        className="fixed top-6 right-6 z-50 inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white/80 backdrop-blur px-4 shadow-md hover:shadow-lg transition-all dark:bg-[rgb(var(--surface))]"
       >
         <span className="mr-2 text-sm font-medium">{dark ? 'Dark' : 'Light'}</span>
         <span className="grid size-7 place-items-center rounded-full bg-[rgb(var(--primary))] text-white">{dark ? '🌙' : '☀️'}</span>

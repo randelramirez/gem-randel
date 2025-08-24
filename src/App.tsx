@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const photos = [
   'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=1600&auto=format&fit=crop',
@@ -28,13 +28,41 @@ export default function App() {
   const now = new Date()
   const daysLeft = Math.max(0, Math.ceil((weddingDate.getTime() - now.getTime()) / (1000*60*60*24)))
 
+  // Theme toggle state
+  const [dark, setDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'dark') return true
+    if (saved === 'light') return false
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (dark) {
+      root.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      root.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }, [dark])
+
   return (
     <main ref={revealRef} className="min-h-screen">
+      {/* Theme toggle */}
+      <button
+        aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+        onClick={() => setDark(v => !v)}
+        className="fixed top-6 right-6 z-50 inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white/80 backdrop-blur px-4 shadow-md hover:shadow-lg transition-all dark:bg-[rgb(var(--surface))]"
+      >
+        <span className="mr-2 text-sm font-medium">{dark ? 'Dark' : 'Light'}</span>
+        <span className="grid size-7 place-items-center rounded-full bg-[rgb(var(--primary))] text-white">{dark ? '🌙' : '☀️'}</span>
+      </button>
       {/* Hero */}
       <section className="relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <img src={photos[0]} alt="" className="h-full w-full object-cover fade-edges" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-white" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-[rgb(var(--bg))]" />
         </div>
         <div className="grain absolute inset-0 -z-10" />
 
@@ -113,7 +141,7 @@ export default function App() {
             {[photos[0], photos[2], photos[1], photos[2], photos[1], photos[0]].map((src, i) => (
               <div key={`${i}-${src.split('/').pop()}`} className="group relative overflow-hidden rounded-2xl border border-black/5 bg-white" data-reveal>
                 <img src={src} alt="Gallery" className="h-48 md:h-64 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </div>
             ))}
           </div>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+// import photo88 from './assets/88.jpg'
+import image from './assets/img.png'
 
 const photos = [
-  'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=1600&auto=format&fit=crop',
+  image,
   'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1600&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1524386540876-3a573db47a4d?q=80&w=1600&auto=format&fit=crop'
 ]
@@ -24,9 +26,13 @@ function useReveal() {
 
 export default function App() {
   const revealRef = useReveal()
-  const weddingDate = new Date('2026-01-30T13:30:00+08:00')
-  const now = new Date()
-  const daysLeft = Math.max(0, Math.ceil((weddingDate.getTime() - now.getTime()) / (1000*60*60*24)))
+
+  // Calculate days left using only dates (not time)
+  const weddingDate = new Date('2026-01-30')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Reset time to midnight
+  weddingDate.setHours(0, 0, 0, 0) // Reset time to midnight
+  const daysLeft = Math.max(0, Math.ceil((weddingDate.getTime() - today.getTime()) / (1000*60*60*24)))
 
   // Theme toggle state
   const [dark, setDark] = useState<boolean>(() => {
@@ -61,7 +67,7 @@ export default function App() {
       {/* Hero */}
       <section className="relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10">
-          <img src={photos[0]} alt="" className="h-full w-full object-cover fade-edges" />
+          <img src={photos[0]} alt="" className="h-full w-full object-cover object-center fade-edges" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-[rgb(var(--bg))]" />
         </div>
         <div className="grain absolute inset-0 -z-10" />
@@ -75,13 +81,19 @@ export default function App() {
             <p className="mt-6 text-lg/7 sm:text-xl/8 max-w-2xl text-white/90" data-reveal>
               Join us as we celebrate our wedding in beautiful Tagaytay on January 30, 2026.
             </p>
-            <div className="mt-8 flex gap-3" data-reveal>
-              <a href="#details" className="btn-primary">View Details</a>
-              <a href="#rsvp" className="btn-ghost">RSVP</a>
-            </div>
             <div className="mt-10 text-sm text-white/80" data-reveal>
               {daysLeft > 0 ? `${daysLeft} days to go` : 'Today is the day!'}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Action Buttons */}
+      <section className="container py-8 sm:py-12">
+        <div className="flex justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4" data-reveal>
+            <a href="#details" className="btn-primary text-center">View Details</a>
+            <a href="#rsvp" className="btn-ghost text-center">RSVP</a>
           </div>
         </div>
       </section>

@@ -6,7 +6,7 @@ import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-  <BrowserRouter>
+  <BrowserRouter basename="/gem-randel">
     <Routes>
       <Route path="/" element={<App />} />
       <Route path="/time-and-venue" element={<div>Time and Venue Page</div>} />

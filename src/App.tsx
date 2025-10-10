@@ -179,7 +179,12 @@ export default function App() {
           </div>
           <div className="relative" data-reveal>
             <div className="aspect-[16/10] overflow-hidden rounded-3xl border border-black/5 bg-white shadow-lg">
-              <img src={photos[2]} alt="Map preview" className="h-full w-full object-cover" />
+              <iframe
+                src="https://embed.waze.com/iframe?zoom=16&lat=14.111042&lon=120.957108&ct=livemap"
+                className="h-full w-full"
+                allowFullScreen
+                title="Waze map"
+              />
             </div>
           </div>
         </div>

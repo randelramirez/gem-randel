@@ -1,17 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-  <BrowserRouter basename="/gem-randel">
-    <Routes>
-      <Route path="/" element={<App />} />
-      <Route path="/time-and-venue" element={<div>Time and Venue Page</div>} />
-      <Route path="/map" element={<div>Map Page</div>} />
-    </Routes>
-  </BrowserRouter>
+    <BrowserRouter basename="/gem-randel">
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/time-and-venue" element={<div>Time and Venue Page</div>} />
+        <Route path="/map" element={<div>Map Page</div>} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 )

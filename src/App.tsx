@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
 // import photo88 from './assets/88.jpg'
 import image from './assets/img.png'
 
@@ -7,6 +8,25 @@ const photos = [
   'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1600&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1524386540876-3a573db47a4d?q=80&w=1600&auto=format&fit=crop'
 ]
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7089'
+const RSVP_OPTIONS = ['Happily attending', 'Regretfully declines'] as const
+type RsvpOption = (typeof RSVP_OPTIONS)[number]
+
+const getInitialDarkMode = () => {
+  if (typeof window === 'undefined') return false
+
+  try {
+    const storedPreference = window.localStorage.getItem('theme')
+    if (storedPreference === 'dark') return true
+    if (storedPreference === 'light') return false
+  } catch {
+    // Ignore storage access errors (e.g., privacy modes)
+  }
+
+  const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)')
+  return !!mediaQuery?.matches
+}
 
 function useReveal() {
   const ref = useRef<HTMLDivElement | null>(null)
@@ -35,30 +55,125 @@ export default function App() {
   const daysLeft = Math.max(0, Math.ceil((weddingDate.getTime() - today.getTime()) / (1000*60*60*24)))
 
   // Theme toggle state
-  const [dark, setDark] = useState<boolean>(() => {
-    const saved = localStorage.getItem('theme')
-    if (saved === 'dark') return true
-    if (saved === 'light') return false
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
+  const [dark, setDark] = useState<boolean>(getInitialDarkMode)
+  const toggleDark = useCallback(() => setDark((prev) => !prev), [])
+
+  const [codeInput, setCodeInput] = useState('')
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
+  const [guestName, setGuestName] = useState<string | null>(null)
+  const [verifiedCode, setVerifiedCode] = useState<string | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<RsvpOption | ''>('')
+  const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+
     const root = document.documentElement
-    if (dark) {
-      root.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      root.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
+    root.classList.toggle('dark', dark)
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('theme', dark ? 'dark' : 'light')
+      } catch {
+        // Ignore storage write failures to avoid breaking the UI
+      }
     }
   }, [dark])
+
+  const handleCodeLookup = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmedCode = codeInput.trim()
+    if (!trimmedCode) return
+
+    setLookupLoading(true)
+    setLookupError(null)
+    setSubmitState('idle')
+    setSubmitError(null)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/sheet/codes/lookup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmedCode })
+      })
+      const payload: { name?: string; message?: string } | null = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message = payload?.message ?? 'Unable to verify code. Please try again.'
+        throw new Error(message)
+      }
+
+      const name = payload?.name
+      if (!name) {
+        throw new Error('Code lookup succeeded but did not return a guest name.')
+      }
+
+      setGuestName(name)
+      setVerifiedCode(trimmedCode)
+      setSelectedStatus('')
+      setCodeInput('')
+    } catch (error) {
+      console.error('Code lookup failed', error)
+      setLookupError(error instanceof Error ? error.message : 'Unable to verify code. Please try again.')
+    } finally {
+      setLookupLoading(false)
+    }
+  }, [codeInput])
+
+  const handleRsvpSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!verifiedCode || !selectedStatus) return
+
+    setSubmitState('loading')
+    setSubmitError(null)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/sheet/codes/rsvp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: verifiedCode, status: selectedStatus })
+      })
+      const payload: { message?: string; name?: string; status?: string } | null = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message = payload?.message ?? 'Unable to submit RSVP. Please try again.'
+        throw new Error(message)
+      }
+
+      if (payload?.name) {
+        setGuestName(payload.name)
+      }
+      if (payload?.status && RSVP_OPTIONS.includes(payload.status as RsvpOption)) {
+        setSelectedStatus(payload.status as RsvpOption)
+      }
+
+      setSubmitError(null)
+      setSubmitState('success')
+    } catch (error) {
+      console.error('RSVP submission failed', error)
+      setSubmitState('error')
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit RSVP. Please try again.')
+    }
+  }, [selectedStatus, verifiedCode])
+
+  const resetGuest = useCallback(() => {
+    setGuestName(null)
+    setVerifiedCode(null)
+    setSelectedStatus('')
+    setSubmitState('idle')
+    setSubmitError(null)
+    setLookupError(null)
+    setCodeInput('')
+  }, [])
 
   return (
     <main ref={revealRef} className="min-h-screen">
       {/* Theme toggle */}
       <button
         aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-        onClick={() => setDark(v => !v)}
+        onClick={toggleDark}
         className="fixed top-6 right-6 z-50 inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white/80 backdrop-blur px-4 shadow-md hover:shadow-lg transition-all dark:bg-[rgb(var(--surface))]"
       >
         <span className="mr-2 text-sm font-medium">{dark ? 'Dark' : 'Light'}</span>
@@ -196,22 +311,88 @@ export default function App() {
         <div className="container">
           <div className="mx-auto max-w-xl rounded-3xl border border-black/5 bg-white/80 backdrop-blur p-8 sm:p-10 shadow-xl" data-reveal>
             <h2 className="text-3xl font-serif text-center">RSVP</h2>
-            <p className="mt-2 text-center text-[rgb(var(--muted))]">Let us know if you can make it.</p>
-            <form className="mt-6 grid gap-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <input required placeholder="Full name" className="rounded-xl border border-black/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring))]" />
-                <input required type="email" placeholder="Email" className="rounded-xl border border-black/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring))]" />
-              </div>
-              <select className="rounded-xl border border-black/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring))]">
-                <option>Happily attending</option>
-                <option>Regretfully declines</option>
-              </select>
-              <textarea rows={4} placeholder="Message (optional)" className="rounded-xl border border-black/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring))]" />
-              <div className="flex justify-center">
-                <button type="button" className="btn-primary">Send RSVP</button>
-              </div>
-              <p className="text-center text-xs text-[rgb(var(--muted))]">This demo form doesn't send yet. Hook it to Google Forms or an API later.</p>
-            </form>
+            <p className="mt-2 text-center text-[rgb(var(--muted))]">
+              {guestName ? 'Update your RSVP below.' : 'Enter your RSVP code to continue.'}
+            </p>
+            {!guestName ? (
+              <form onSubmit={handleCodeLookup} className="mt-6 grid gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <input
+                    id="rsvp-code"
+                    value={codeInput}
+                    onChange={(event) => setCodeInput(event.target.value)}
+                    placeholder="Enter your RSVP code"
+                    className="flex-1 rounded-xl border border-black/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring))]"
+                    required
+                    disabled={lookupLoading}
+                    autoComplete="off"
+                  />
+                  <button
+                    type="submit"
+                    className="btn-primary whitespace-nowrap"
+                    disabled={lookupLoading}
+                  >
+                    {lookupLoading ? 'Checking…' : 'Enter code'}
+                  </button>
+                </div>
+                {lookupError && (
+                  <p className="text-center text-sm text-red-600">{lookupError}</p>
+                )}
+              </form>
+            ) : (
+              <form onSubmit={handleRsvpSubmit} className="mt-6 grid gap-5">
+                <div className="text-center space-y-1">
+                  <p className="text-lg font-semibold">Hi! {guestName}</p>
+                  <p className="text-sm text-[rgb(var(--muted))]">We're excited to celebrate with you.</p>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="rsvp-status" className="text-sm font-medium text-[rgb(var(--muted))]">
+                    Select your RSVP
+                  </label>
+                  <select
+                    id="rsvp-status"
+                    value={selectedStatus}
+                    onChange={(event) => setSelectedStatus(event.target.value as RsvpOption)}
+                    className="rounded-xl border border-black/10 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring))]"
+                    required
+                  >
+                    <option value="" disabled>
+                      Choose an option
+                    </option>
+                    {RSVP_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {submitError && (
+                  <p className="text-center text-sm text-red-600">{submitError}</p>
+                )}
+                {submitState === 'success' && (
+                  <p className="text-center text-sm text-emerald-600">
+                    Thank you! Your RSVP has been recorded.
+                  </p>
+                )}
+                <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                  <button
+                    type="submit"
+                    className="btn-primary w-full sm:w-auto"
+                    disabled={selectedStatus === '' || submitState === 'loading'}
+                  >
+                    {submitState === 'loading' ? 'Submitting…' : 'Submit RSVP'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost w-full sm:w-auto"
+                    onClick={resetGuest}
+                    disabled={submitState === 'loading'}
+                  >
+                    Use a different code
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </section>

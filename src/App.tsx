@@ -93,7 +93,7 @@ export default function App() {
     setSubmitError(null)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/sheet/codes/lookup`, {
+      const response = await fetch(`${API_BASE_URL}/codes/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: trimmedCode })
@@ -130,7 +130,7 @@ export default function App() {
     setSubmitError(null)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/sheet/codes/rsvp`, {
+      const response = await fetch(`${API_BASE_URL}/rsvp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: verifiedCode, status: selectedStatus })
